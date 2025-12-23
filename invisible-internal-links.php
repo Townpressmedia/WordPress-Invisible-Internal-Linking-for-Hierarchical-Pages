@@ -13,8 +13,7 @@
  *  - Sibling subpages
  *
  * This is designed for SEO-first architectures such as:
- *  - Venue directories
- *  - Location-based service pages
+ *  
  *  - Hierarchical content hubs
  *
  * KEY CHARACTERISTICS
