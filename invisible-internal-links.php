@@ -1,49 +1,119 @@
 <?php
 /**
- * Plugin Name: Invisible Internal Links for WordPress
- * Description: Automatically injects invisible, crawlable internal links between parent and sibling pages for SEO.
- * Version: 1.0.0
- * Author: Open Source
- * License: MIT
+ * Invisible Internal Links (v1.1.0)
+ *
+ * Author: CriticalWP.com
+ * License: Open Source
+ *
+ * PURPOSE
+ * -------
+ * Appends invisible but crawlable internal links to page content
+ * at render time, reinforcing hierarchical relationships between:
+ *  - Parent pages
+ *  - Sibling subpages
+ *
+ * This is designed for SEO-first architectures such as:
+ *  - Venue directories
+ *  - Location-based service pages
+ *  - Hierarchical content hubs
+ *
+ * KEY CHARACTERISTICS
+ * -------------------
+ * ✔ No editor modification
+ * ✔ No shortcodes
+ * ✔ No JavaScript
+ * ✔ No display:none or visibility:hidden
+ * ✔ Crawlable and accessibility-safe
+ * ✔ Runs only on front-end pages
+ *
+ * WHAT v1.1 ADDS
+ * --------------
+ * ✔ Transient caching (per page)
+ * ✔ Hard limit on sibling links (safety guardrail)
  */
 
+/**
+ * Append invisible internal links to page content
+ */
 add_filter( 'the_content', function ( $content ) {
 
-    // Only run on front-end pages
+    /* ---------------------------------------------------------
+     * Scope & Safety Checks
+     * --------------------------------------------------------- */
+
+    // Run only on front-end page views
     if ( ! is_page() || is_admin() ) {
         return $content;
     }
 
     global $post;
 
+    // Bail if post context is unavailable
     if ( ! $post ) {
         return $content;
     }
 
-    // Determine parent page
+    /* ---------------------------------------------------------
+     * Transient Cache (Performance)
+     * --------------------------------------------------------- */
+
+    // Unique cache key per page
+    $cache_key = 'criticalwp_internal_links_' . $post->ID;
+
+    // Return cached HTML if available
+    $cached = get_transient( $cache_key );
+    if ( $cached !== false ) {
+        return $content . $cached;
+    }
+
+    /* ---------------------------------------------------------
+     * Determine Page Hierarchy
+     * --------------------------------------------------------- */
+
+    // Use parent if available, otherwise current page is the parent
     $parent_id = $post->post_parent ? $post->post_parent : $post->ID;
     $parent    = get_post( $parent_id );
 
+    // Bail if parent cannot be resolved
     if ( ! $parent ) {
         return $content;
     }
 
-    // Get sibling pages
+    /* ---------------------------------------------------------
+     * Retrieve Sibling Pages (with safety limit)
+     * --------------------------------------------------------- */
+
     $siblings = get_pages([
         'parent'      => $parent_id,
-        'sort_column' => 'menu_order, post_title',
         'post_status' => 'publish',
+        'sort_column' => 'menu_order, post_title',
+        'number'      => 50, // HARD LIMIT (v1.1 safety guard)
     ]);
 
+    // No siblings = nothing to output
     if ( empty( $siblings ) ) {
         return $content;
     }
 
+    /* ---------------------------------------------------------
+     * Build HTML Output
+     * --------------------------------------------------------- */
+
     ob_start();
     ?>
+    <!--
+        Invisible Internal Links
+        - Intentionally hidden via CSS (off-screen)
+        - Crawlable by search engines
+        - Not visible to users
+    -->
     <div class="seo-internal-links">
         <ul>
-            <?php if ( $post->ID !== $parent_id ) : ?>
+
+            <?php
+            // Parent link (only when on a child page)
+            if ( $post->ID !== $parent_id ) :
+            ?>
                 <li>
                     <a href="<?php echo esc_url( get_permalink( $parent_id ) ); ?>">
                         <?php echo esc_html( $parent->post_title ); ?>
@@ -51,8 +121,12 @@ add_filter( 'the_content', function ( $content ) {
                 </li>
             <?php endif; ?>
 
-            <?php foreach ( $siblings as $page ) :
-                if ( $page->ID === $post->ID ) continue;
+            <?php
+            // Sibling links (exclude current page)
+            foreach ( $siblings as $page ) :
+                if ( $page->ID === $post->ID ) {
+                    continue;
+                }
             ?>
                 <li>
                     <a href="<?php echo esc_url( get_permalink( $page->ID ) ); ?>">
@@ -60,10 +134,20 @@ add_filter( 'the_content', function ( $content ) {
                     </a>
                 </li>
             <?php endforeach; ?>
+
         </ul>
     </div>
     <?php
 
-    return $content . ob_get_clean();
+    $html = ob_get_clean();
+
+    /* ---------------------------------------------------------
+     * Cache Output (v1.1)
+     * --------------------------------------------------------- */
+
+    // Cache for 12 hours to minimize repeated hierarchy queries
+    set_transient( $cache_key, $html, 12 * HOUR_IN_SECONDS );
+
+    return $content . $html;
 
 });
