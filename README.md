@@ -25,6 +25,12 @@ Links are hidden using an SEO-safe, accessibility-approved off-screen technique 
 
 ---
 
+## How This Helps SEO
+
+This utility improves SEO by strengthening how pages are connected behind the scenes. By automatically linking parent pages and related subpages together in a crawlable (but invisible) way, it helps search engines better understand page relationships, distribute internal link authority, and crawl content more efficiently. While it doesn’t affect what users see, it improves structural clarity — supporting indexing, topical grouping, and long-term search performance.
+
+---
+
 ## Key Features
 
 - No editor modification required
