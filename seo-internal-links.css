@@ -1,0 +1,11 @@
+/*
+Visually hidden but crawlable internal links.
+This pattern is SEO-safe and accessibility-friendly.
+*/
+.seo-internal-links {
+    position: absolute;
+    left: -9999px;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+}
